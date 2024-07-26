@@ -58,15 +58,15 @@ use crate::encoding::{DescriptorEncoder, EncodeMetric};
 /// # assert_eq!(expected, buffer);
 /// ```
 #[derive(Debug, Default)]
-pub struct Registry {
+pub struct Registry<'a> {
     prefix: Option<Prefix>,
-    labels: Vec<(Cow<'static, str>, Cow<'static, str>)>,
-    metrics: Vec<(Descriptor, Box<dyn Metric>)>,
-    collectors: Vec<Box<dyn Collector>>,
-    sub_registries: Vec<Registry>,
+    labels: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    metrics: Vec<(Descriptor, Box<dyn Metric<'a>>)>,
+    collectors: Vec<Box<dyn Collector<'a>>>,
+    sub_registries: Vec<Registry<'a>>,
 }
 
-impl Registry {
+impl<'a> Registry<'a> {
     /// Creates a new default [`Registry`] with the given prefix.
     pub fn with_prefix(prefix: impl Into<String>) -> Self {
         Self {
@@ -76,9 +76,7 @@ impl Registry {
     }
 
     /// Creates a new default [`Registry`] with the given labels.
-    pub fn with_labels(
-        labels: impl Iterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
-    ) -> Self {
+    pub fn with_labels(labels: impl Iterator<Item = (Cow<'a, str>, Cow<'a, str>)>) -> Self {
         Self {
             labels: labels.into_iter().collect(),
             ..Default::default()
@@ -88,7 +86,7 @@ impl Registry {
     /// Creates a new default [`Registry`] with the given prefix and labels.
     pub fn with_prefix_and_labels(
         prefix: impl Into<String>,
-        labels: impl Iterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
+        labels: impl Iterator<Item = (Cow<'a, str>, Cow<'a, str>)>,
     ) -> Self {
         Self {
             prefix: Some(Prefix(prefix.into())),
@@ -124,7 +122,7 @@ impl Registry {
         &mut self,
         name: N,
         help: H,
-        metric: impl Metric,
+        metric: impl Metric<'a>,
     ) {
         self.priv_register(name, help, metric, None)
     }
@@ -156,7 +154,7 @@ impl Registry {
         name: N,
         help: H,
         unit: Unit,
-        metric: impl Metric,
+        metric: impl Metric<'a>,
     ) {
         self.priv_register(name, help, metric, Some(unit))
     }
@@ -165,7 +163,7 @@ impl Registry {
         &mut self,
         name: N,
         help: H,
-        metric: impl Metric,
+        metric: impl Metric<'a>,
         unit: Option<Unit>,
     ) {
         let descriptor = Descriptor::new(name, help, unit);
@@ -203,7 +201,10 @@ impl Registry {
     ///
     /// registry.register_collector(my_collector);
     /// ```
-    pub fn register_collector(&mut self, collector: Box<dyn Collector>) {
+    pub fn register_collector(
+        &mut self,
+        collector: std::boxed::Box<(dyn Collector<'a> + 'static)>,
+    ) {
         self.collectors.push(collector);
     }
 
@@ -254,17 +255,14 @@ impl Registry {
     }
 
     /// Like [`Registry::sub_registry_with_prefix`] but with a label instead.
-    pub fn sub_registry_with_label(
-        &mut self,
-        label: (Cow<'static, str>, Cow<'static, str>),
-    ) -> &mut Self {
+    pub fn sub_registry_with_label(&mut self, label: (Cow<'a, str>, Cow<'a, str>)) -> &mut Self {
         self.sub_registry_with_labels(std::iter::once(label))
     }
 
     /// Like [`Registry::sub_registry_with_prefix`] but with multiple labels instead.
     pub fn sub_registry_with_labels(
         &mut self,
-        labels: impl Iterator<Item = (Cow<'static, str>, Cow<'static, str>)>,
+        labels: impl Iterator<Item = (Cow<'a, str>, Cow<'a, str>)>,
     ) -> &mut Self {
         let mut new_labels = self.labels.clone();
         new_labels.extend(labels);
@@ -385,7 +383,9 @@ impl Unit {
 }
 
 /// Super trait representing an abstract Prometheus metric.
-pub trait Metric: crate::encoding::EncodeMetric + Send + Sync + std::fmt::Debug + 'static {}
+pub trait Metric<'a>: crate::encoding::EncodeMetric + Send + Sync + std::fmt::Debug + 'a {}
 
-impl<T> Metric for T where T: crate::encoding::EncodeMetric + Send + Sync + std::fmt::Debug + 'static
-{}
+impl<'a, T> Metric<'a> for T where
+    T: crate::encoding::EncodeMetric + Send + Sync + std::fmt::Debug + 'a
+{
+}

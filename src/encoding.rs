@@ -90,7 +90,7 @@ impl DescriptorEncoder<'_> {
     pub(crate) fn with_prefix_and_labels<'s>(
         &'s mut self,
         prefix: Option<&'s Prefix>,
-        labels: &'s [(Cow<'static, str>, Cow<'static, str>)],
+        labels: &'s [(Cow<'s, str>, Cow<'s, str>)],
         // TODO: result needed?
     ) -> DescriptorEncoder<'s> {
         for_both_mut!(

@@ -185,7 +185,7 @@ where
 pub(crate) struct DescriptorEncoder<'a> {
     writer: &'a mut dyn Write,
     prefix: Option<&'a Prefix>,
-    labels: &'a [(Cow<'static, str>, Cow<'static, str>)],
+    labels: &'a [(Cow<'a, str>, Cow<'a, str>)],
 }
 
 impl<'a> std::fmt::Debug for DescriptorEncoder<'a> {
@@ -206,7 +206,7 @@ impl DescriptorEncoder<'_> {
     pub(crate) fn with_prefix_and_labels<'s>(
         &'s mut self,
         prefix: Option<&'s Prefix>,
-        labels: &'s [(Cow<'static, str>, Cow<'static, str>)],
+        labels: &'s [(Cow<'s, str>, Cow<'s, str>)],
     ) -> DescriptorEncoder<'s> {
         DescriptorEncoder {
             prefix,
@@ -289,7 +289,7 @@ pub(crate) struct MetricEncoder<'a> {
     prefix: Option<&'a Prefix>,
     name: &'a str,
     unit: Option<&'a Unit>,
-    const_labels: &'a [(Cow<'static, str>, Cow<'static, str>)],
+    const_labels: &'a [(Cow<'a, str>, Cow<'a, str>)],
     family_labels: Option<&'a dyn super::EncodeLabelSet>,
 }
 
@@ -479,7 +479,7 @@ impl<'a> MetricEncoder<'a> {
         Ok(())
     }
 
-    fn write_suffix(&mut self, suffix: &'static str) -> Result<(), std::fmt::Error> {
+    fn write_suffix(&mut self, suffix: &'a str) -> Result<(), std::fmt::Error> {
         self.writer.write_str("_")?;
         self.writer.write_str(suffix)?;
 
